@@ -1,0 +1,4 @@
+checkers : Red meat-R200
+woolworths : yoyo-R30
+woolworths : yoyo-R30
+woolworths : Rice-R100
