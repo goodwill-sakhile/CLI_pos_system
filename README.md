@@ -12,3 +12,9 @@ This is a **Java-based Command Line Interface (CLI) Point of Sale (POS) System**
 
 ## 📁 Folder Structure
 
+src/com/pos/
+├── cli/ # User interaction entry point
+├── model/ # Domain models
+├── service/ # Business logic
+├── db/ # In-memory storage
+└── util/ # Utilities
