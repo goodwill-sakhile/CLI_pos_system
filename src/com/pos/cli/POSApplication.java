@@ -1,5 +1,5 @@
 package com.pos.cli;
-
+import com.pos.model.PaymentMethod;
 import com.pos.auth.User;
 import com.pos.auth.UserManager;
 import com.pos.db.InMemoryDatabase;
@@ -98,8 +98,39 @@ public class POSApplication {
     }
 
     private void handleCheckout() {
-        Sale sale = salesService.checkout();
+    if (salesService == null) return;
+
+    if (salesService.cartIsEmpty()) {
+        System.out.println("🛒 Cart is empty. Add items first.");
+        return;
+    }
+
+    System.out.println("Select payment method:");
+    System.out.println("1. Cash");
+    System.out.println("2. Card");
+    System.out.println("3. Mobile");
+    String option = InputUtil.readLine("Option: ");
+
+    PaymentMethod method;
+    switch (option) {
+        case "1" -> method = PaymentMethod.CASH;
+        case "2" -> method = PaymentMethod.CARD;
+        case "3" -> method = PaymentMethod.MOBILE;
+        default -> {
+            System.out.println("❌ Invalid payment method.");
+            return;
+        }
+    }
+
+    Sale sale = salesService.checkoutWithPayment(method);
+    if (sale != null) {
         receiptService.print(sale);
+    } else {
+        // Restore stock if payment failed
+        salesService.clearCart();
+    }
+}
+
     }
 
     private void handleAddNewProduct() {
