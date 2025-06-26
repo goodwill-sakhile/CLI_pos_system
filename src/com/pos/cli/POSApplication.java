@@ -1,28 +1,44 @@
 package com.pos.cli;
 
+import com.pos.auth.User;
+import com.pos.auth.UserManager;
 import com.pos.db.InMemoryDatabase;
+import com.pos.export.CSVExporter;
+import com.pos.model.Sale;
+import com.pos.report.SalesReportGenerator;
 import com.pos.service.InventoryService;
 import com.pos.service.ReceiptService;
 import com.pos.service.SalesService;
+import com.pos.settings.StoreSettings;
 import com.pos.util.InputUtil;
-import com.pos.model.Sale;
 
 public class POSApplication {
 
     private final InventoryService inventoryService;
     private final SalesService salesService;
     private final ReceiptService receiptService;
+    private final UserManager userManager;
+    private final StoreSettings storeSettings;
+    private final CSVExporter csvExporter;
+    private final InMemoryDatabase database;
+
+    private User currentUser;
 
     public POSApplication() {
-        InMemoryDatabase database = new InMemoryDatabase();
+        this.database = new InMemoryDatabase();
         this.inventoryService = new InventoryService(database);
         this.salesService = new SalesService(database);
         this.receiptService = new ReceiptService();
+        this.userManager = new UserManager();
+        this.storeSettings = new StoreSettings();
+        this.csvExporter = new CSVExporter();
     }
 
     public void start() {
-        boolean running = true;
+        System.out.println("🔐 Welcome to Java POS System");
+        loginScreen();
 
+        boolean running = true;
         while (running) {
             showMainMenu();
             String choice = InputUtil.readLine("Enter option: ");
@@ -34,8 +50,11 @@ public class POSApplication {
                 case "4" -> handleCheckout();
                 case "5" -> salesService.printSalesHistory();
                 case "6" -> handleAddNewProduct();
+                case "7" -> showStoreSettings();
+                case "8" -> generateSalesReport();
+                case "9" -> exportSalesToCSV();
                 case "0" -> {
-                    System.out.println("👋 Exiting POS System. Goodbye!");
+                    System.out.println("👋 Logged out. Goodbye " + currentUser.getUsername());
                     running = false;
                 }
                 default -> System.out.println("❌ Invalid option. Please try again.");
@@ -43,16 +62,33 @@ public class POSApplication {
         }
     }
 
+    private void loginScreen() {
+        while (true) {
+            String username = InputUtil.readLine("Username: ");
+            String password = InputUtil.readLine("Password: ");
+            currentUser = userManager.login(username, password);
+            if (currentUser != null) {
+                System.out.println("✅ Login successful. Welcome, " + currentUser.getUsername());
+                break;
+            } else {
+                System.out.println("❌ Invalid credentials. Try again.");
+            }
+        }
+    }
+
     private void showMainMenu() {
-        System.out.println("\n===== POINT OF SALE (CLI) =====");
+        System.out.println("\n===== JAVA POS MENU =====");
         System.out.println("1. View Inventory");
         System.out.println("2. Add Item to Cart");
         System.out.println("3. View Cart");
         System.out.println("4. Checkout");
         System.out.println("5. View Sales History");
         System.out.println("6. Add New Product");
-        System.out.println("0. Exit");
-        System.out.println("================================");
+        System.out.println("7. Store Settings");
+        System.out.println("8. Generate Sales Report");
+        System.out.println("9. Export Sales to CSV");
+        System.out.println("0. Logout & Exit");
+        System.out.println("=========================");
     }
 
     private void handleAddToCart() {
@@ -72,6 +108,29 @@ public class POSApplication {
         double price = InputUtil.readDouble("Product Price: ");
         int stock = InputUtil.readInt("Initial Stock: ");
         inventoryService.addProduct(id, name, price, stock);
+    }
+
+    private void showStoreSettings() {
+        storeSettings.display();
+        System.out.println("Do you want to update the store settings? (yes/no)");
+        String choice = InputUtil.readLine(">> ");
+        if (choice.equalsIgnoreCase("yes")) {
+            String name = InputUtil.readLine("New Store Name: ");
+            String location = InputUtil.readLine("Location: ");
+            String contact = InputUtil.readLine("Contact Info: ");
+            storeSettings.updateSettings(name, location, contact);
+            System.out.println("✅ Store settings updated.");
+        }
+    }
+
+    private void generateSalesReport() {
+        SalesReportGenerator report = new SalesReportGenerator(database.getSalesHistory());
+        report.generateSummary();
+    }
+
+    private void exportSalesToCSV() {
+        String filename = InputUtil.readLine("Enter filename to export (e.g. sales.csv): ");
+        csvExporter.exportSales(database.getSalesHistory(), filename);
     }
 
     public static void main(String[] args) {
